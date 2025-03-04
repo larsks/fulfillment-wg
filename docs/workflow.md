@@ -1,4 +1,4 @@
-# Fulfillment workflow
+# Cluster workflow
 
 > [!WARNING]
 > This is a **draft** of the fulfillment workflow.
@@ -7,26 +7,28 @@
 
 ### Super high level overview
 
-This section has a high level overview of the fulfillment workflow.
+This section has a high level overview of the cluster fulfillment workflow.
 
 I've tried to capture the relationship between the involved components in the following diagram. The yellow boxes represent services that we expect to exist somewhere, but aren't necessarily part of our development work. The green boxes represent aggregate hardware resources.
 
 ```mermaid
 graph TD
-  fs[fulfillment service]-->cs[cluster service]
-  cs-->storage(storage)
-  cs-->hps[hotpool service]
-  hps-->bms[bare metal service]
-  bms-->bmh[bare metal host]
-  cs-->l2s[layer 2 service]
+  fs[fulfillment service]-->cfs[cluster fulfillment service]
+  cfs-->storage(storage)
+  cfs-->hps[hotpool service]
+  hps-->bfs
+  bfs-->bms[bare metal service]
+  bms-->bmh[bare metal hosts]
+  bfs-->l2s[layer 2 service]
   l2s-->switch[network switches]
-  cs-->l3s[layer 3 service]
-  cs-->dns(dns)
-  cs-->acm
-  cs-->cfg(config management)
-  bms-->inventory(inventory)
-  l2s-->inventory(inventory)
-  cs-.->bms
+  bfs-->l3s[layer 3 service]
+  cfs-->bfs
+  cfs-->dns
+  cfs-->acm
+  cfs-->cfg(config management)
+  bms-->inventory
+  l2s-->inventory
+  l3s-->inventory
 
   style inventory fill:#ffe875
   style cfg fill:#ffe875
@@ -107,3 +109,33 @@ Throughout the process, *FS* polls *CS* (maybe? Or **CS** signals **FS**?) so th
 - When post-install configuration is complete, initiate validation tasks
   - We want to verify that the cluster is healthy before reporting completion
   - Could be another EDA workflow, or just deploy a test workload on the target cluster, or ???
+
+# Bare metal workflow
+
+This section has a high level overview of the bare metal fulfillment workflow.
+
+```mermaid
+graph TD
+  fs[fulfillment service]-->bfs[bare metal fulfillment service]
+  bfs-->bms[bare metal service]
+  bms-->bmh[bare metal hosts]
+  bfs-->l2s[layer 2 service]
+  l2s-->switch[network switches]
+  bfs-->l3s[layer 3 service]
+  bfs-->inventory
+  l2s-->inventory
+  l3s-->inventory
+
+  style inventory fill:#ffe875
+
+  style switch fill:#87ff75
+  style bmh fill:#87ff75
+```
+
+- Fulfillment service (**FS**) receives a request for bare metal resources
+- FS selects an appropriate backend and delivers request to bare metal service (**BMS**)
+- BMS receives request and then...
+
+  - Contacts layer 2 service (**L2S**) to create l2 network and bind bare metal hosts to network
+  - [Optionally] Contacts layer 3 service (**L3S**) to create l3 network (cidr, dhcp, gateway) and allocate floating/elastic ips for api and ingress
+  - [Optionally] Contacts dns provider to create resource records for api and ingress
